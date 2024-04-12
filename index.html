@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Sign Language Capture</title>
+        <link rel="stylesheet" type="text/css" href="./css/dist.css" />
+    </head>
+    <body class="bg-gray-100">
+        <div class="container mx-auto py-8">
+            <h1 class="text-3xl font-bold mb-4">Sign Language Capture</h1>
+            <div class="flex justify-center">
+                <video
+                    id="video"
+                    class="w-full max-w-lg rounded-lg shadow-lg"
+                ></video>
+            </div>
+            <div class="flex justify-center mt-4">
+                <button
+                    id="startButton"
+                    class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mr-4"
+                >
+                    Start
+                </button>
+                <button
+                    id="stopButton"
+                    class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
+                >
+                    Stop
+                </button>
+            </div>
+            <div id="capturedFrames1" class="mt-8 grid grid-cols-4 gap-4"></div>
+            <div class="mt-8">
+                <h2 class="text-2xl font-bold mb-2">Transcribed Text:</h2>
+                <p id="transcribedText" class="text-lg"></p>
+            </div>
+        </div>
+
+        <script>
+            const video = document.getElementById("video")
+            const startButton = document.getElementById("startButton")
+            const stopButton = document.getElementById("stopButton")
+            const capturedFrames = document.getElementById("capturedFrames")
+            const transcribedText = document.getElementById("transcribedText")
+            let text = ""
+
+            let stream
+            let intervalId
+
+            startButton.addEventListener("click", startCapture)
+            stopButton.addEventListener("click", stopCapture)
+
+            async function startCapture() {
+                if (stream) return
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                })
+                video.srcObject = stream
+                video.play()
+
+                intervalId = setInterval(captureFrame, 500) // Capture a frame every 500 milliseconds
+                setTimeout(() => speakText(text), 750)
+                displayTextWithTypingEffect(text)
+            }
+
+            function stopCapture() {
+                if (!intervalId) return
+                clearInterval(intervalId)
+                video.pause()
+
+                video.srcObject = null
+                stream.getTracks().forEach((track) => track.stop())
+                stream = null
+            }
+
+            function captureFrame() {
+                const canvas = document.createElement("canvas")
+                canvas.width = video.videoWidth
+                canvas.height = video.videoHeight
+
+                const ctx = canvas.getContext("2d")
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+                const img = document.createElement("img")
+                img.src = canvas.toDataURL("image/png")
+                img.classList.add("w-full", "rounded-lg", "shadow-md")
+
+                if (capturedFrames && capturedFrames.lastElementChild) {
+                    capturedFrames.removeChild(capturedFrames.lastElementChild)
+                    capturedFrames.appendChild(img)
+                }
+
+                text = "Hello, how are you? Hope you are doing amazing!"
+                
+            }
+
+            function displayTextWithTypingEffect(text) {
+                transcribedText.textContent = ""
+                let i = 0
+                const typingInterval = setInterval(() => {
+                    if (i < text.length) {
+                        transcribedText.textContent += text.charAt(i)
+                        i++
+                    } else {
+                        clearInterval(typingInterval)
+                    }
+                }, 50)
+            }
+
+            function speakText(text) {
+                const utterance = new SpeechSynthesisUtterance(text)
+                speechSynthesis.speak(utterance)
+            }
+        </script>
+    </body>
+</html>
